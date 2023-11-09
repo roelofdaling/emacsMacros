@@ -711,7 +711,6 @@
   )
 
 (defun isUTH()
-  (interactive)
   (save-excursion
     (beginning-of-buffer)
     (if (re-search-forward "IMEX/GEM Explicit:" nil 1) t nil)
@@ -719,7 +718,6 @@
 )  
 
 (defun hasRegions()
-  (interactive)
   (save-excursion
     (beginning-of-buffer)
     (if (re-search-forward "#Start" nil 1) t nil)
@@ -727,12 +725,19 @@
 )  
 
 (defun isIPF()
-  (interactive)
   (save-excursion
     (beginning-of-buffer)
     (if (re-search-forward "TS.*/IPF" nil 1) t nil)
   )  
 )  
+
+(defun isCFLLOG()
+  (save-excursion
+    (beginning-of-buffer)
+    (if (re-search-forward "guided task execution" nil 1) t nil)
+  )  
+)  
+
 
 
 (defun SelectDefaultOutputBuffer ()
@@ -763,7 +768,7 @@
   (let((menu (make-sparse-keymap "ORG")))
   (bindings--define-key menu [ psf-annotate-for-org-mode-ipfts] '(menu-item "IPF Timestep to collapsible blocks"  convert-ipfts-to-org-blocks
 									  :help "convert every IPF timestep to a collapsible block. Activates org-mode"
-                                                                          :enable (and (notAlreadyOrgBlockAnnotated) (isIPF )) ))
+                                                                          :enable (and  (notAlreadyOrgBlockAnnotated) (isIPF) ) ))
   (bindings--define-key menu [ annotate-for-org-mode] '(menu-item "Log regions to collapsible blocks"  annotate-for-org-mode
 									  :help "convert the IPF log-regions to collapsible blocks. Activates org-mode"
                                                                           :enable (and (notAlreadyOrgBlockAnnotated) (hasRegions)) ))
@@ -785,7 +790,7 @@
   
 (defvar ipf-related-menu
   (let ((menu (make-sparse-keymap "IPF")))
-    (bindings--define-key menu [ psf-goto-ipfts ] '(menu-item "Goto start of IPF timestep"  psf-goto-ipfts :help "goto start of timestep"))
+    (bindings--define-key menu [ psf-goto-ipfts ] '(menu-item "Goto start of IPF timestep"  psf-goto-ipfts :help "goto start of timestep")  )
     (bindings--define-key menu [ psf-current-ipfts ] '( menu-item "Goto current IPF timestep"  psf-current-ipfts :help "goto start of timestep w.r.t. current line"))
     (bindings--define-key menu [ psf-next-ipfts ] '(menu-item "Goto next IPF timestep"  psf-next-ipfts :help "goto the beginning of the next timestep w.r.t. current line"))
     (bindings--define-key menu [ psf-prev-ipfts ] '(menu-item "Goto previous IPF timestep"  psf-prev-ipfts :help "goto the beginning of the previous timestep w.r.t. current line"))
@@ -810,9 +815,9 @@
     menu
     ))
 (defvar psf-log-menu-map (let ((psf-log-menu (make-sparse-keymap "PSFlowNavigation")))
-(bindings--define-key psf-log-menu [ ipf-navigation ] `(menu-item "IPF navigation",  ipf-related-menu :enable (isIPF)))
-(bindings--define-key psf-log-menu [ uth-navigation ] `(menu-item "UTH navigation",  uth-related-menu :enable (isUTH)))			   			   
-(bindings--define-key psf-log-menu [ org-log-regions ] `(menu-item "Log-Regions",  org-related-menu))			   			   
+(bindings--define-key psf-log-menu [ ipf-navigation ] `(menu-item "IPF navigation",  ipf-related-menu :enable (and (isCFLLOG) (isIPF) ) ) )
+(bindings--define-key psf-log-menu [ uth-navigation ] `(menu-item "UTH navigation",  uth-related-menu :enable (and (isCFLLOG) (isUTH) ) ) )			   			   
+(bindings--define-key psf-log-menu [ org-log-regions ] `(menu-item "Log-Regions",  org-related-menu :enable (isCFLLOG) ) )			   			   
 psf-log-menu
 
 ))
