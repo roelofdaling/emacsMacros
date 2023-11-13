@@ -713,7 +713,7 @@
 (defun isUTH()
   (save-excursion
     (beginning-of-buffer)
-    (if (re-search-forward "IMEX/GEM Explicit:" nil 1) t nil)
+    (if (re-search-forward "Start creating.*dataset" nil 1) t nil)
   )  
 )  
 
