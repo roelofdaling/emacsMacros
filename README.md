@@ -5,7 +5,7 @@
 <li>To activate this functionality use the emacs 'load-file' command to load this file. It is most convenient to do this in
 you init.el file. For example, by adding the following two lines:
 <tt>
-(add-to-list 'load-path "&ltpathToYour&gt")
+(add-to-list 'load-path "&ltpathToYourClone&gt")
 (load "psf-log-navigation.el")  
 </tt>
 </li>  
