@@ -738,6 +738,12 @@
   )  
 )  
 
+(defun hasIMEX-IPR()
+  (save-excursion
+    (beginning-of-buffer)
+    (if (re-search-forward "Before mapping: IPR table for well" nil 1) t nil )
+  )
+)  
 
 
 (defun SelectDefaultOutputBuffer ()
@@ -800,11 +806,11 @@
 
 (defvar uth-related-menu
   (let ((menu (make-sparse-keymap "UTH")))
-    (bindings--define-key menu [ psf-goto-ipr ] '(menu-item "Goto IPR for well"  psf-goto-ipr
+    (bindings--define-key menu [ psf-goto-ipr ] '(menu-item "Goto IPR for well"  psf-goto-ipr :enable (hasIMEX-IPR)
 							     :help "Goto IPR of selected well and timestep. Requires UTH in Explicit Coupling mode"))    
-    (bindings--define-key menu [ psf-copy-ipr ] '(menu-item "Copy IPR for well"  psf-copy-ipr
+    (bindings--define-key menu [ psf-copy-ipr ] '(menu-item "Copy IPR for well"  psf-copy-ipr :enable (hasIMEX-IPR)
 							     :help "Copy IPR of selected well and timestep to PSFLOW-Log-Info buffer. Requires UTH in Explicit Coupling mode"))
-    (bindings--define-key menu [ psf-extract-info] '(menu-item "Well info at TS"  psf-extract-info-ts
+    (bindings--define-key menu [ psf-extract-info] '(menu-item "Well info at TS"  psf-extract-info-ts :enable (hasIMEX-IPR)
 								:help "Extracts IPR/Targets/Result for well at specified timestep. Requires UTH in Explicit Coupling mode"))
     (bindings--define-key menu [ psf-imex-dat ] '(menu-item "Open IMEX dat file"  psf-imex-dat
 							     :help "Open the Imex .dat file for selected reservoir in a new frame."))        
