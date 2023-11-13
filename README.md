@@ -1,7 +1,8 @@
 # ssw-psflow-emacs-log-navigation
 
 <ul>
-<li>This file contains a number of emacs-lisp functions to facilitate navigating through a large PSFLOW log file.</li>
+<li>This file contains a number of emacs-lisp functions to facilitate navigating through a large PSFLOW log file. It is in particular intended for
+log-files obtained with the Coflow <tt>Debug</tt>-logging level</li>
 <li>To activate this functionality use the emacs 'load-file' command to load this file. It is most convenient to do this in
 you init.el file. For example, by adding the following two lines:
 <tt>
