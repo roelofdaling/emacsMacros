@@ -29,6 +29,55 @@
 
 
 
+
+( defun psf-replace-timecol (  )
+  "replace the wall-time colummn with a string shownig timestep info. To help comparing buffers"
+  (interactive)  
+  (
+   let(
+       (srch-time24 "^\\w\\w\\w\\w/\\w\\w/\\w\\w\\s-*\\w\\w:\\w\\w:\\w\\w")
+       (srch-time12 "^\\w.*?[AP]M")
+       (srch-time "")
+       (srch-ipfts "\\(TS.*\\)/IPF:\\s-From\\s-+\\(\\w+/\\w+/\\w+\\).*to\\s-\\(\\w+/\\w+/\\w+\\).*$")	
+       (start 0) (end 0) (from "") (to "") (ts ""))
+    (setq srch-time srch-time24)
+    (save-excursion
+      (end-of-buffer)
+      (setq end (point))
+      (while (search-backward-regexp srch-ipfts nil t)
+      (search-backward-regexp srch-ipfts nil t)
+          (setq ts (match-string-no-properties 1))
+          (setq from (match-string-no-properties 2))
+          (setq to (match-string-no-properties 3))
+	  (setq col (concat ts "(" from " -- " to ")"))
+	  (search-backward "PRE TIMESTEP")
+	  (beginning-of-line)
+	  (setq start (point))
+	  (print (concat "B: " col "--" (number-to-string start) "--" (number-to-string end)))
+          (replace-regexp-in-region srch-time col start end)
+	  (setq end(point))
+	  (print (concat "A: " col "--" (number-to-string start) "--" (number-to-string end)))
+       )
+      )
+   )
+)      
+
+
+( defun psf-replace-timecol-simple ()
+  "replace the time colummn with YYY. To help comparing buffers"
+  (interactive)
+  (
+   let( (srch "^\\w\\w\\w\\w/\\w\\w/\\w\\w\\s-*\\w\\w:\\w\\w:\\w\\w") )
+    (save-excursion
+      (beginning-of-buffer)
+      (while (re-search-forward srch nil t)
+        (replace-match "YYYY/MM/DD")
+      )
+    )
+  )
+) 
+
+
 (defun psf-goto-ipfts (ts)
   "goto start of timestep looking for IPF prior solve"
   (interactive "Mtimestep: ")
@@ -695,6 +744,16 @@
    nil t "")
 )
 
+(defun getBuffers ( )
+  (interactive)
+  (ido-read-buffer "prompt" (other-buffer (current-buffer))
+                   (confirm-nonexistent-file-or-buffer))
+  
+  (read-buffer-to-switch "Select buffer")
+)  
+
+
+
 (defun notAlreadyOrgBlockAnnotated()  
   (save-excursion
     (beginning-of-buffer)
@@ -823,7 +882,11 @@
 (defvar psf-log-menu-map (let ((psf-log-menu (make-sparse-keymap "PSFlowNavigation")))
 (bindings--define-key psf-log-menu [ ipf-navigation ] `(menu-item "IPF navigation",  ipf-related-menu :enable (and (isCFLLOG) (isIPF) ) ) )
 (bindings--define-key psf-log-menu [ uth-navigation ] `(menu-item "UTH navigation",  uth-related-menu :enable (and (isCFLLOG) (isUTH) ) ) )			   			   
-(bindings--define-key psf-log-menu [ org-log-regions ] `(menu-item "Log-Regions",  org-related-menu :enable (isCFLLOG) ) )			   			   
+(bindings--define-key psf-log-menu [ org-log-regions ] `(menu-item "Log-Regions",  org-related-menu :enable (isCFLLOG) ) )
+(bindings--define-key psf-log-menu [ psf-replace-timecol ] '(menu-item "Replace timecol"  psf-replace-timecol
+								       :enable (isCFLLOG)
+								       :help "replace the timecol to remove irrelevant differences between buffers")  )
+
 psf-log-menu
 
 ))
