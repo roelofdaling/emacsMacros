@@ -40,7 +40,7 @@
        (srch-time "")
        (srch-ipfts "\\(TS.*\\)/IPF:\\s-From\\s-+\\(\\w+/\\w+/\\w+\\).*to\\s-\\(\\w+/\\w+/\\w+\\).*$")	
        (start 0) (end 0) (from "") (to "") (ts ""))
-    (setq srch-time srch-time24)
+    (setq srch-time srch-time12)
     (save-excursion
       (end-of-buffer)
       (setq end (point))
@@ -172,6 +172,25 @@
   
   )
 ) 
+
+(defun psf-goto-ipr-cfl (well ts)
+  "search for Coflow native IPR of well at start of selected timestep: The IPR which will be used in the prior solve of the selected timestep "
+  (interactive
+   (list
+    (getWellArgs)
+    (read-number "timestep: ")
+    )
+  )
+  ( let ((srch " "))
+    (beginning-of-buffer)
+    (setq qwell (concat "'" well "'"))
+    (setq srch (concat "IPR table of well: " qwell))
+    (psf-goto-ipfts (number-to-string ts))
+    (search-forward-regexp srch)
+    (PrintCurrentTimestep)
+  )
+)
+
 
 (defun psf-goto-ipr (well ts)
   "search for IPR of well at start of selected timestep: The IPR which will be used in the prior solve of the selected timestep "
@@ -326,7 +345,7 @@
 (defun map-glb-eu (f)
   "convert folder name"
   (
-   let ( (glb "/glb/eu/pt/sgs") (eu "//europe.shell.com/tcs/ams/pt.sgs"))
+   let ( (glb "/glb/ams/") (eu "//europe.shell.com/tcs/ams/"))
     ( setq f (string-replace glb eu f))
     )
 )  
@@ -813,6 +832,28 @@
    ) 
   )
 
+(defun GetCurrentTimestep()
+  (interactive)
+  (
+   let(       
+     (srch-ipfts "\\(TS.*\\)/IPF:\\s-From\\s-+\\(\\w+/\\w+/\\w+\\).*to\\s-\\(\\w+/\\w+/\\w+\\).*$")	
+     (ts ""))
+   (save-excursion
+     (search-backward-regexp srch-ipfts nil t)
+     (setq ts (match-string-no-properties 1))
+     )
+   ts
+  )
+)
+
+(defun PrintCurrentTimestep()
+  (interactive)
+  (
+    let ((ts ""))
+   (setq ts (GetCurrentTimestep) )
+    (print ts)
+  )
+)
 
 (require `org-mouse)
 (setq search-invisible t)
@@ -860,6 +901,8 @@
     (bindings--define-key menu [ psf-next-ipfts ] '(menu-item "Goto next IPF timestep"  psf-next-ipfts :help "goto the beginning of the next timestep w.r.t. current line"))
     (bindings--define-key menu [ psf-prev-ipfts ] '(menu-item "Goto previous IPF timestep"  psf-prev-ipfts :help "goto the beginning of the previous timestep w.r.t. current line"))
     (bindings--define-key menu [ psf-goto-solspace ] '(menu-item "Goto IPF Solution space"  psf-goto-solspace :help "goto start of selected solution space in selected timestep"))
+    (bindings--define-key menu [ psf-goto-ipr-cfl ] '(menu-item "Goto CFL IPR"  psf-goto-ipr-cfl :help "goto Coflow calculated IPR")  )
+    
      menu
      ))
 
