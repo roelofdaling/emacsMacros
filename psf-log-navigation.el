@@ -78,7 +78,21 @@
 ) 
 
 
+
 (defun psf-goto-ipfts (ts)
+  "goto start of timestep looking for IPF prior solve"
+  (interactive "Mtimestep: ")
+  (
+   let ((srch " ") (begin 0) (end 0))
+    (beginning-of-buffer)    
+    (setq srch (concat "TS" ts "/IPF: From"))
+    (condition-case nil (search-forward srch) (error nil))
+  )
+  (point)
+)
+
+
+(defun psf-goto-ipfts-old (ts)
   "goto start of timestep looking for IPF prior solve"
   (interactive "Mtimestep: ")
   (
@@ -88,6 +102,35 @@
     (search-forward srch)
   )
   (point)
+)
+
+
+(defun psf-goto-cflts (ts)
+  "goto start of timestep looking for coflow string"
+  (interactive "Mtimestep: ")
+  (
+   let ((srch " ") (begin 0) (end 0))
+    (beginning-of-buffer)    
+    (setq srch (concat "at beginning of timestep " ts))
+    (condition-case nil (search-forward srch) (error nil))
+  )
+  (point)
+)
+
+
+(defun psf-goto-ts (ts)
+  "goto start of timestep looking for IPF or CFL prior solve"
+  (interactive "Mtimestep: ")
+  (
+   let ((pnt nil) )
+   (setq pnt ( psf-goto-ipfts ts ))
+   (if ( eq pnt 1)
+      (progn
+         ( setq pnt (psf-goto-cflts ts) )
+       )
+   )
+   (print pnt)
+  )
 )
 
 
@@ -204,7 +247,7 @@
     (beginning-of-buffer)
     (setq qwell (concat "'" well "'"))
     (setq srch (concat "After mapping: IPR table for well " qwell))
-    (psf-goto-ipfts (number-to-string ts))
+    (psf-goto-ts (number-to-string ts))
     (search-backward srch)
   )
 )
@@ -324,8 +367,28 @@
      (append-to-buffer toBufferName begin end)
     )
     )
-   (if (not toName)  (SelectDefaultOutputBuffer))
+   ;;;(if (not toName)  (SelectDefaultOutputBuffer))
 )
+
+(defun psf-ipr-tsrange (well ts1 ts2)
+  (interactive
+   (list
+    (getWellArgs)
+    (read-number "timestep 1:")
+    (read-number "timestep 2:")
+    )
+   )
+  (let ((ts "") (bufferName (concat "iprs-" well)))
+     (get-buffer-create bufferName)
+     (setq ts ts1)
+     (while (<= ts ts2)
+        (psf-copy-ipr well ts bufferName)
+	(setq ts (+ ts 1))
+	)
+     (switch-to-buffer-other-frame bufferName)
+   )
+)
+
 
 (defun psf-imex-obdbg()
   "find imex working directory"
