@@ -199,6 +199,29 @@
 )
 
 
+(defun psf-goto-mainsolve(ts)
+  "goto start of main solve in selected timestep"
+  (interactive
+    (list (read-string "timestep: "))
+   )
+  ( psf-goto-ts ts)
+  ( gotoMainSolve)
+)
+
+(defun psf-goto-nr-mainsolve(ts it)
+  "goto start of main solve in selected timestep"
+  (interactive
+   (list
+    (read-string "timestep: ")
+    (read-string "iteration: ")
+    )
+   )
+  ( psf-goto-mainsolve ts)
+  ( gotoNewtonIteration it)
+)
+
+
+
 (defun psf-goto-solspace (solspace ts)
   "goto start of selected solution space in selected timestep"
   (interactive
@@ -228,8 +251,8 @@
     (beginning-of-buffer)
     (setq qwell (concat "'" well "'"))
     (setq srch (concat "IPR table of well: " qwell))
-    (psf-goto-ipfts (number-to-string ts))
-    (search-forward-regexp srch)
+    (psf-goto-ts (number-to-string ts))
+    (search-backward-regexp srch)
     (PrintCurrentTimestep)
   )
 )
@@ -261,7 +284,7 @@
     )
   )
   ( let ((srch " "))
-    (psf-goto-ipfts (number-to-string ts))
+    (psf-goto-ts (number-to-string ts))
     (setq qwell (concat "'" well "'"))
     (setq srch (concat "Target control.*for the simulator well:.*" qwell))
     (search-forward-regexp srch)
@@ -276,8 +299,8 @@
     (read-number "timestep: ")
     )
    )
-  ( let ((srch "Well Summary:"))
-    (psf-goto-ipfts (number-to-string ts))
+  ( let ((srch "Well Summary:") (nowell "No operational well") (current:""))
+    (psf-goto-ts (number-to-string ts))
     (search-forward-regexp srch)
     (setq srch well)
     (search-forward-regexp srch)
@@ -295,24 +318,29 @@
     (read-number "timestep: ")
     )
   )
-  ( let ((srch " ") (begin 0) (end 0) (toBufferName "cfl-info"))
+  ( let ((srch " ") (inoperative "Inoperative") (current "") (begin 0) (end 0) (toBufferName "cfl-info"))
     (if toName
       (setq toBufferName toName)
       )
     (log toBufferName (concat "----- Targets for IMEX, TS " (number-to-string ts) " ------- "))     
     (save-excursion
-     (psf-goto-ipfts (number-to-string ts))
+     (psf-goto-ts (number-to-string ts))
      (setq qwell (concat "'" well "'"))
      (setq srch (concat "CoFlow information for well:.*" qwell))
      (search-forward-regexp srch)
      (beginning-of-line)
      (push-mark (point))    
      (setq begin (point))
-     (setq srch (concat "Target control.*for the simulator well:.*" qwell))
-     (search-forward-regexp srch)
-     (end-of-line)
-     (setq end (point))
-     (append-to-buffer toBufferName begin end)
+     ;;(forward-line)
+     ;;(setq current (buffer-substring (line-beginning-position) (line-end-position) ))
+     ;;(if ( string-match inoperative current) 
+     (setq srch "IMEX/GEM Explicit: ************")
+     ;;)	       
+     ;;(setq srch (concat "Target control.*for the simulator well:.*" qwell))
+      (search-forward srch)
+      (end-of-line)
+      (setq end (point))
+      (append-to-buffer toBufferName begin end)
     ) 
   )
 )  
@@ -388,6 +416,26 @@
      (switch-to-buffer-other-frame bufferName)
    )
 )
+
+(defun psf-well-info-tsrange (well ts1 ts2)
+  (interactive
+   (list
+    (getWellArgs)
+    (read-number "timestep 1:")
+    (read-number "timestep 2:")
+    )
+   )
+  (let ((ts "") (bufferName (concat "info-timerange-" well)))
+     (get-buffer-create bufferName)
+     (setq ts ts1)
+     (while (<= ts ts2)
+        (psf-extract-info-ts well ts bufferName)
+	(setq ts (+ ts 1))
+	)
+     (switch-to-buffer-other-frame bufferName)
+   )
+)
+
 
 
 (defun psf-imex-obdbg()
@@ -517,7 +565,7 @@
   (switch-to-prev-buffer)
 )  
 
-(defun psf-extract-info-ts(well ts)
+(defun psf-extract-info-ts(well ts &optional toName)
   (interactive
    (list
     (getWellArgs)
@@ -526,11 +574,19 @@
   )
   (
    let ((bufferName (concat "info-" well "-" (number-to-string ts))))
-    (get-buffer-create bufferName)
-    (psf-copy-ipr well ts bufferName)
+    (if toName
+	(setq bufferName toName)
+      ( progn
+	(
+         (get-buffer-create bufferName)
+        )  
+       )
+    )    
+    ;;(psf-copy-ipr well ts bufferName)
     (psf-copy-imex-information well ts bufferName)
-    (psf-copy-well-summary well ts bufferName)
-    (switch-to-buffer-other-frame bufferName)
+    (if ( isOperativeUth well ts)
+	(psf-copy-well-summary well ts bufferName)
+    )
   )
 )
  
@@ -834,6 +890,22 @@
   (read-buffer-to-switch "Select buffer")
 )  
 
+(defun gotoMainSolve ( )
+  (
+   let ((srch "Starting main solve"))
+   (search-forward srch)
+   (beginning-of-line)
+   )
+ )
+
+(defun gotoNewtonIteration ( it )
+  (
+   let ((srch "NR iteration "))
+   (setq srch (concat srch it)) 	
+   (search-forward srch)
+   (beginning-of-line)
+   )
+ )
 
 
 (defun notAlreadyOrgBlockAnnotated()  
@@ -917,6 +989,22 @@
     (print ts)
   )
 )
+
+(defun isOperativeUth ( well ts)
+  ( let ((srch " ") (inoperative "Inoperative"))
+    (save-excursion
+     (psf-goto-ts (number-to-string ts))
+     (setq qwell (concat "'" well "'"))
+     (setq srch (concat "CoFlow information for well:.*" qwell))
+     (search-forward-regexp srch)
+     (beginning-of-line)
+     (forward-line)
+     (setq current (buffer-substring (line-beginning-position) (line-end-position) ))
+     (if ( string-match inoperative current) nil t)
+    )
+  )
+)
+
 
 (require `org-mouse)
 (setq search-invisible t)
