@@ -135,7 +135,7 @@
   ) 
   (
    let (  (ovs () )(f "") (fm "") (begin 0) (end 0) (srch "") (key-begin "") (key-end "") (done nil))
-    (setq key-begin (concat "TS\\w+/IPF/name))
+    (setq key-begin (concat "TS\\w+/IPF/name"))
     (setq key-end (concat "#+END_" name))
     (setq srch "#\\+BEGIN.*\\|#\\+END.*")
      (save-excursion

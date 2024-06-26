@@ -118,6 +118,12 @@
 )
 
 
+(defun psf-goto-ts-sync (ts)
+  (interactive "Mtimestep: ")
+  (exec-function-all 'psf-goto-ts ts)
+  (psf-goto-ts ts)
+)
+
 (defun psf-goto-ts (ts)
   "goto start of timestep looking for IPF or CFL prior solve"
   (interactive "Mtimestep: ")
@@ -132,6 +138,34 @@
    (print pnt)
   )
 )
+
+
+
+(defun psf-goto-end-ts (ts)
+  "goto end of timestep looking Well Summary"
+  (interactive "Mtimestep: ")
+  (
+   let ((pnt nil) (srch "Well Summary") )
+   (setq pnt ( psf-goto-ipfts ts ))
+   (if ( eq pnt 1)
+      (progn
+         ( setq pnt (psf-goto-cflts ts) )
+       )
+   )
+  (search-forward srch)
+  )
+ )
+
+
+(defun psf-goto-end-ts-sync(ts)
+  "goto end of selected timestep in all logs"
+  (interactive
+    (list (read-string "timestep: "))
+   )
+  (exec-function-all 'psf-goto-end-ts ts)
+  (psf-goto-end-ts ts)
+)  
+
 
 
 (defun psf-prev-ipfts()
@@ -176,6 +210,14 @@
   (point)
 )
 
+(defun psf-next-ipfts-sync ()
+  (interactive)
+  (exec-function-all 'psf-next-ipfts)
+  (psf-next-ipfts)
+)
+
+
+
 (defun psf-next-ipfts()
   "goto to the next timestep w.r.t the current cursor"  
   (interactive)
@@ -199,6 +241,7 @@
 )
 
 
+
 (defun psf-goto-mainsolve(ts)
   "goto start of main solve in selected timestep"
   (interactive
@@ -207,6 +250,16 @@
   ( psf-goto-ts ts)
   ( gotoMainSolve)
 )
+
+(defun psf-goto-mainsolve-sync(ts)
+  "goto start of main solve in selected timestep in all logs"
+  (interactive
+    (list (read-string "timestep: "))
+   )
+  (exec-function-all 'psf-goto-mainsolve ts)
+  (psf-goto-mainsolve ts)
+)  
+
 
 (defun psf-goto-nr-mainsolve(ts it)
   "goto start of main solve in selected timestep"
@@ -1206,6 +1259,23 @@
     )
   )
 )
+
+(defun exec-function-all (func &optional arg)
+  "Apply function FUNC with argument ARG to all visible windows."
+  (let ((num-windows (count-windows))
+	(count 1))
+    (when (> num-windows 1)
+      (other-window 1)
+      (while (< count num-windows)
+	(condition-case nil
+	    (if arg 
+		(funcall func arg)
+		(funcall func)
+	    )
+	  ;; Ignore beginning- or end-of-buffer error in other windows.
+          (error nil))
+	(other-window 1)
+	(setq count (1+ count))))))
 
 
 (require `org-mouse)
