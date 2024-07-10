@@ -846,6 +846,57 @@
 )
  
 
+(defun psf-extract-info-ts(well ts &optional toName)
+  (interactive
+   (list
+    (getWellArgs)
+    (read-number "timestep: ")
+    )
+  )
+  (
+   let ((bufferName (concat "info-" well "-" (number-to-string ts))))
+    (if toName
+	(setq bufferName toName)
+      ( progn
+	(
+         (get-buffer-create bufferName)
+        )  
+       )
+    )    
+    (psf-copy-ipr well ts bufferName)
+    (psf-copy-imex-information well ts bufferName)
+    (if ( isOperativeUth well ts)
+	(psf-copy-well-summary well ts bufferName)
+    )
+  )
+)
+
+
+(defun psf-extract-duration ( bufferName)
+  (interactive
+  (list
+    (read-string "bufferName: ")
+    )
+  )
+  (
+   let (
+	(bufferName (concat "ts-duration_" bufferName ) )
+	(srch "")
+	)
+   (setq srch (concat "TS.*/IPF: From" ))
+   (get-buffer-create bufferName) 
+   (save-excursion
+      (while (search-forward-regexp srch nil t)
+        (beginning-of-line)
+        (setq begin(point))
+        (end-of-line)
+        (setq end(point))
+        (append-to-buffer bufferName begin end)
+	(log bufferName "")
+      )    
+   )
+  )
+)
 
 (defun annotate-for-org-mode ()
   (interactive)
