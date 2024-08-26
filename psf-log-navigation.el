@@ -451,6 +451,30 @@
    ;;;(if (not toName)  (SelectDefaultOutputBuffer))
 )
 
+
+(defun psf-extract-ts (ts)
+  (interactive
+   (list
+    (read-number "timestep ")
+    )
+   )  
+  ( let ((begin 0) (end 0) (tsn 0) (toBufferName (concat "TS" (number-to-string ts) "-" (buffer-name))))
+    ( setq tsn (+ ts 1) )  
+    (setq ts (number-to-string ts))
+    (setq tsn (number-to-string tsn))
+    (save-excursion
+      (psf-goto-ts ts )
+      (beginning-of-line)
+      (push-mark (point))
+      (setq begin (point))
+      (psf-goto-ts tsn )
+      (beginning-of-line)
+      (setq end (point))
+      (append-to-buffer toBufferName begin end)
+      )
+  )
+)
+
 (defun psf-ipr-tsrange (well ts1 ts2)
   (interactive
    (list
@@ -870,7 +894,6 @@
     )
   )
 )
-
 
 (defun psf-extract-duration ( bufferName)
   (interactive
