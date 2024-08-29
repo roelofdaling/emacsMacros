@@ -452,6 +452,38 @@
 )
 
 
+(defun imx-copy-ipr (well ts &optional toName) 
+  "copy  IPR of well at start of specified timestep"
+  (interactive
+   (list
+    (read-string "well: ")
+    (read-number "timestep: ")
+    )
+   )
+  (
+   let ((srch "") (begin 0) (end 0) (toBufferName (DefaultOutputBuffer) ))
+    (if toName
+	(setq toBufferName toName)
+      )
+    (log toBufferName (concat "----- IPR used for prior solve TS " (number-to-string ts) " ------- ")) 
+    (save-excursion
+     (imx-goto-ipr well ts)
+     (beginning-of-line)
+     (push-mark (point))
+     (setq begin (point))
+     (setq srch "IPRTABLE")
+     (search-forward srch)
+     (setq srch "FLUIDGRAV")
+     (search-forward srch)
+     (beginning-of-line)
+     (setq end (point))
+     (append-to-buffer toBufferName begin end)
+    )
+    )
+   ;;;(if (not toName)  (SelectDefaultOutputBuffer))
+)
+
+
 (defun psf-extract-ts (ts)
   (interactive
    (list
@@ -483,7 +515,7 @@
     (read-number "timestep 2:")
     )
    )
-  (let ((ts "") (bufferName (concat "iprs-" well)))
+  (let ((ts "") (bufferName (concat "iprs-" "'" well "'")))
      (get-buffer-create bufferName)
      (setq ts ts1)
      (while (<= ts ts2)
@@ -493,6 +525,26 @@
      (switch-to-buffer-other-frame bufferName)
    )
 )
+
+(defun imx-ipr-tsrange (well ts1 ts2)
+  (interactive
+   (list
+    (read-string "well: ")
+    (read-number "timestep 1:")
+    (read-number "timestep 2:")
+    )
+   )
+  (let ((ts "") (bufferName (concat "iprs-imx-" "'" well "'")))
+     (get-buffer-create bufferName)
+     (setq ts ts1)
+     (while (<= ts ts2)
+        (imx-copy-ipr well ts bufferName)
+	(setq ts (+ ts 1))
+	)
+     (switch-to-buffer-other-frame bufferName)
+   )
+)
+
 
 (defun psf-well-info-tsrange (well ts1 ts2)
   (interactive
@@ -561,6 +613,29 @@
    )
 )
 
+(defun psf-gem-file( reservoir ext)
+  "find gem file with extenstion ext"
+  (
+   let ((srch (concat "Finish creating wells dataset section for reservoir " reservoir))
+	(srch2 "GEM data file:\\s-.*\\.dat")
+	(first "GEM data file: '")
+	;(last "\\s-.*created")
+	(f " "))
+    (save-excursion
+      (beginning-of-buffer)
+      (search-forward-regexp srch)
+      (search-forward-regexp srch2)
+      (setq f (match-string-no-properties 0))
+      (print f)
+      (setq f (string-replace first "" f))
+      (setq f (string-replace ".dat" ext f))
+      (setq f (map-glb-eu f))
+      (print f )
+      (switch-to-buffer (find-file-other-frame f))
+    )
+   )
+)
+
 
 (defun psf-imex-dat( reservoir)
   "find imex dat file and open in new buffer"
@@ -576,6 +651,21 @@
   )
 )
 
+(defun psf-gem-dat( reservoir)
+  "find imex dat file and open in new buffer"
+  (interactive
+  (list
+   (getUTHReservoirArgs)
+   )
+  )
+  (
+   let ((f " "))
+   (setq f (psf-gem-file reservoir ".dat")) 
+   (switch-to-buffer (find-file-other-frame f))
+  )
+)
+
+
 (defun psf-imex-out( reservoir)
   "find imex out file and open in new buffer"  
   (interactive
@@ -586,6 +676,20 @@
   (
    let ((f " "))
    (setq f (psf-imex-file reservoir ".out")) 
+   (switch-to-buffer (find-file-other-frame f))
+  )
+)
+
+(defun psf-gem-out( reservoir)
+  "find imex out file and open in new buffer"  
+  (interactive
+  (list
+   (getUTHReservoirArgs)
+   )
+  )
+  (
+   let ((f " "))
+   (setq f (psf-gem-file reservoir ".out")) 
    (switch-to-buffer (find-file-other-frame f))
   )
 )
@@ -601,6 +705,22 @@
   (
    let ((f " "))
    (setq f (psf-imex-file reservoir ".obdbg")) 
+   (switch-to-buffer (find-file-other-frame f))
+   ;(read-only-mode)
+  )
+)
+
+
+(defun psf-gem-obdbg( reservoir)
+  "find gem obdbg file and open in new buffer"
+  (interactive
+  (list
+   (getUTHReservoirArgs)
+   )
+  )
+  (
+   let ((f " "))
+   (setq f (psf-gem-file reservoir ".obdbg")) 
    (switch-to-buffer (find-file-other-frame f))
    ;(read-only-mode)
   )
