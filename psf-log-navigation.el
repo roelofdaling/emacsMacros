@@ -11,6 +11,8 @@
     )
 )  
 
+(defvar currentGlobalSrch "")
+
 (defconst POINT-REGISTER 0
   "Register to save the current point in.")
 
@@ -30,22 +32,20 @@
 
 
 
-( defun psf-replace-timecol (  )
+( defun psf-replace-time24 (  )
   "replace the wall-time colummn with a string shownig timestep info. To help comparing buffers"
   (interactive)  
   (
    let(
        (srch-time24 "^\\w\\w\\w\\w/\\w\\w/\\w\\w\\s-*\\w\\w:\\w\\w:\\w\\w")
-       (srch-time12 "^\\w.*?[AP]M")
        (srch-time "")
        (srch-ipfts "\\(TS.*\\)/IPF:\\s-From\\s-+\\(\\w+/\\w+/\\w+\\).*to\\s-\\(\\w+/\\w+/\\w+\\).*$")	
        (start 0) (end 0) (from "") (to "") (ts ""))
-    (setq srch-time srch-time12)
+    (setq srch-time srch-time24)
     (save-excursion
       (end-of-buffer)
       (setq end (point))
       (while (search-backward-regexp srch-ipfts nil t)
-      (search-backward-regexp srch-ipfts nil t)
           (setq ts (match-string-no-properties 1))
           (setq from (match-string-no-properties 2))
           (setq to (match-string-no-properties 3))
@@ -56,14 +56,44 @@
 	  (print (concat "B: " col "--" (number-to-string start) "--" (number-to-string end)))
           (replace-regexp-in-region srch-time col start end)
 	  (setq end(point))
-	  (print (concat "A: " col "--" (number-to-string start) "--" (number-to-string end)))
+	  ;;;(print (concat "A: " col "--" (number-to-string start) "--" (number-to-string end)))
+       )
+      )
+   )
+)      
+
+( defun psf-replace-time12 (  )
+  "replace the wall-time colummn with a string shownig timestep info. To help comparing buffers"
+  (interactive)  
+  (
+   let(
+       (srch-time12 "^\\w.*?[AP]M")
+       (srch-time "")
+       (srch-ipfts "\\(TS.*\\)/IPF:\\s-From\\s-+\\(\\w+/\\w+/\\w+\\).*to\\s-\\(\\w+/\\w+/\\w+\\).*$")	
+       (start 0) (end 0) (from "") (to "") (ts ""))
+    (setq srch-time srch-time12)
+    (save-excursion
+      (end-of-buffer)
+      (setq end (point))
+      (while (search-backward-regexp srch-ipfts nil t)
+          (setq ts (match-string-no-properties 1))
+          (setq from (match-string-no-properties 2))
+          (setq to (match-string-no-properties 3))
+	  (setq col (concat ts "(" from " -- " to ")"))
+	  (search-backward "PRE TIMESTEP")
+	  (beginning-of-line)
+	  (setq start (point))
+	  (print (concat "B: " col "--" (number-to-string start) "--" (number-to-string end)))
+          (replace-regexp-in-region srch-time col start end)
+	  (setq end(point))
+	  ;;;(print (concat "A: " col "--" (number-to-string start) "--" (number-to-string end)))
        )
       )
    )
 )      
 
 
-( defun psf-replace-timecol-simple ()
+( defun psf-replace-time24-simple ()
   "replace the time colummn with YYY. To help comparing buffers"
   (interactive)
   (
@@ -76,6 +106,47 @@
     )
   )
 ) 
+
+
+(defun psf-goto-string (srchfor ts)
+  "goto start of timestep looking for IPF prior solve"
+  (interactive
+   (list
+    (read-string "search for: ")
+    (read-number "timestep: ")
+    )
+  )
+  (
+   let ((srch " ") (begin 0) (end 0))
+    (beginning-of-buffer)
+    (psf-goto-ts (number-to-string ts))
+    (setq currentGlobalSrch srchfor)
+    (setq srch srchfor)
+    (condition-case nil (search-forward currentGlobalSrch) (error nil))
+   )
+  (point)
+)
+
+(defun psf-goto-prets (ts)
+  "goto PRE TIMESTEP of timestep"
+  (interactive
+   (list
+     (read-number "timestep: ")
+   )
+  )  
+    (beginning-of-buffer)
+    (psf-goto-ts (number-to-string ts))
+    (search-backward "PRE TIMESTEP")
+)
+;;;(defun psf-goto-next-string ()
+;;;  "goto start of timestep looking for IPF prior solve"
+;;;  (interactive)
+;;;  (save-or-goto-saved-point)	
+;;;  (condition-case nil (search-forward currentGlobalSrch) (error nil))
+;;;  
+;;;  (point)
+;;;)
+
 
 
 
@@ -120,7 +191,7 @@
 
 (defun psf-goto-ts-sync (ts)
   (interactive "Mtimestep: ")
-  (exec-function-all 'psf-goto-ts ts)
+  (apply-function-all 'psf-goto-ts (list ts))
   (psf-goto-ts ts)
 )
 
@@ -162,7 +233,7 @@
   (interactive
     (list (read-string "timestep: "))
    )
-  (exec-function-all 'psf-goto-end-ts ts)
+  (apply-function-all 'psf-goto-end-ts (list ts ))
   (psf-goto-end-ts ts)
 )  
 
@@ -256,7 +327,7 @@
   (interactive
     (list (read-string "timestep: "))
    )
-  (exec-function-all 'psf-goto-mainsolve ts)
+  (apply-function-all 'psf-goto-mainsolve (list ts))
   (psf-goto-mainsolve ts)
 )  
 
@@ -291,6 +362,8 @@
   
   )
 ) 
+
+
 
 (defun psf-goto-ipr-cfl (well ts)
   "search for Coflow native IPR of well at start of selected timestep: The IPR which will be used in the prior solve of the selected timestep "
@@ -343,6 +416,7 @@
     (search-forward-regexp srch)
   )
 )  
+
 
 (defun psf-goto-well-summary (well ts)
   "go to the line summarizing the selected well results at end of main solve of the selected timestep"
@@ -544,6 +618,35 @@
      (switch-to-buffer-other-frame bufferName)
    )
 )
+
+
+(defun psf-extract-convergence ( model )
+  (interactive
+   (list
+    (read-string "model ")
+    )
+   )  
+  ( let ((begin 0) (end 0) (dof "The number of d.o.f.") (iter "NR iteration") (curit 0) (previt -1) (bufferName "") (current ""))
+    ( setq ts (GetCurrentTimestep))
+    ( setq bufferName (concat "Convergence-" model "-" ts))
+    (get-buffer-create bufferName)
+    
+    (save-excursion
+      (search-backward dof)
+      (while (>= curit previt)
+        (search-forward model nil nil)
+        (setq current (buffer-substring (line-beginning-position) (line-end-position) ))
+        (setq current (concat (number-to-string curit) current))
+        (log bufferName current )
+        (setq previt curit)
+        (search-forward iter nil nil)
+        (setq current (buffer-substring (line-beginning-position) (line-end-position) ))
+        (setq curit (string-to-number (nth 2 (split-string current))))
+      )
+    )
+  )
+)
+
 
 
 (defun psf-well-info-tsrange (well ts1 ts2)
@@ -1454,6 +1557,24 @@
   )
 )
 
+(defun apply-function-all (func &optional arg)
+  "Apply function FUNC with argument ARG to all visible windows."
+  (let ((num-windows (count-windows))
+	(count 1))
+    (when (> num-windows 1)
+      (other-window 1)
+      (while (< count num-windows)
+	(condition-case nil
+	    (if arg 
+		(apply func arg)
+		(apply func)
+	    )
+	  ;; Ignore beginning- or end-of-buffer error in other windows.
+          (error nil))
+	(other-window 1)
+	(setq count (1+ count))))))
+
+
 (defun exec-function-all (func &optional arg)
   "Apply function FUNC with argument ARG to all visible windows."
   (let ((num-windows (count-windows))
@@ -1543,7 +1664,10 @@
 (bindings--define-key psf-log-menu [ ipf-navigation ] `(menu-item "IPF navigation",  ipf-related-menu :enable (and (isCFLLOG) (isIPF) ) ) )
 (bindings--define-key psf-log-menu [ uth-navigation ] `(menu-item "UTH navigation",  uth-related-menu :enable (and (isCFLLOG) (isUTH) ) ) )			   			   
 (bindings--define-key psf-log-menu [ org-log-regions ] `(menu-item "Log-Regions",  org-related-menu :enable (isCFLLOG) ) )
-(bindings--define-key psf-log-menu [ psf-replace-timecol ] '(menu-item "Replace timecol"  psf-replace-timecol
+(bindings--define-key psf-log-menu [ psf-replace-time24 ] '(menu-item "Replace timecol24"  psf-replace-time24
+								       :enable (isCFLLOG)
+								       :help "replace the timecol to remove irrelevant differences between buffers")  )
+(bindings--define-key psf-log-menu [ psf-replace-time12 ] '(menu-item "Replace timecol12"  psf-replace-time12
 								       :enable (isCFLLOG)
 								       :help "replace the timecol to remove irrelevant differences between buffers")  )
 
