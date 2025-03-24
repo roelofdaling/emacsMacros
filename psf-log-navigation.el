@@ -620,20 +620,22 @@
 )
 
 
-(defun psf-extract-convergence ( model )
+(defun psf-extract-convergence ( model comment )
   (interactive
    (list
-    (read-string "model ")
+    (read-string "model: ")
+    (read-string "comment: ")
     )
    )  
   ( let ((begin 0) (end 0) (dof "The number of d.o.f.") (iter "NR iteration") (curit 0) (previt -1) (bufferName "") (current ""))
     ( setq ts (GetCurrentTimestep))
     ( setq bufferName (concat "Convergence-" model "-" ts))
     (get-buffer-create bufferName)
-    
     (save-excursion
-      (search-backward dof)
-      (while (>= curit previt)
+    (search-backward dof)
+    (log bufferName (concat "-------- " comment " -----------"))
+    (log bufferName (concat "-------- start at line: " (what-line) " -----------"))
+      (while (> curit previt)
         (search-forward model nil nil)
         (setq current (buffer-substring (line-beginning-position) (line-end-position) ))
         (setq current (concat (number-to-string curit) current))
