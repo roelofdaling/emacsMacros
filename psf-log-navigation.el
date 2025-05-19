@@ -392,12 +392,13 @@
     (read-number "timestep: ")
     )
   )
-  ( let ((srch " "))
-    (beginning-of-buffer)
-    (setq qwell (concat "'" well "'"))
-    (setq srch (concat "After mapping: IPR table for well " qwell))
-    (psf-goto-ts (number-to-string ts))
-    (search-backward srch)
+  ( let ((srch " ") (found nil))
+      (beginning-of-buffer)
+      (setq qwell (concat "'" well "'"))
+      (setq srch (concat "After mapping: IPR table for well " qwell))
+      (psf-goto-ts (number-to-string ts))
+      (if (search-backward srch nil t) (setq found t))
+    found
   )
 )
 
@@ -509,21 +510,63 @@
       )
     (log toBufferName (concat "----- IPR used for prior solve TS " (number-to-string ts) " ------- ")) 
     (save-excursion
-     (psf-goto-ipr well ts)
-     (beginning-of-line)
-     (push-mark (point))
-     (setq begin (point))
-     (setq srch "Bottomhole")
-     (search-forward srch)
-     (setq srch "IMEX")
-     (search-forward srch)
-     (beginning-of-line)
-     (setq end (point))
-     (append-to-buffer toBufferName begin end)
+      (if (psf-goto-ipr well ts)
+	  (progn 
+            (beginning-of-line)
+            (push-mark (point))
+            (setq begin (point))
+            (setq srch "Bottomhole")
+            (search-forward srch)
+            (setq srch "IMEX")
+            (search-forward srch)
+            (beginning-of-line)
+            (setq end (point))
+            (append-to-buffer toBufferName begin end)
+	    )
+      )
     )
     )
    ;;;(if (not toName)  (SelectDefaultOutputBuffer))
 )
+
+(defun psf-copy-ipr-csv (well ts &optional toName) 
+  "copy  IPR of well at start of specified timestep"
+  (interactive
+   (list
+    (getWellArgs)
+    (read-number "timestep: ")
+    )
+   )
+  (
+   let ((srch "Bottomhole") (begin 0) (end 0) (output "") (toBufferName (DefaultOutputBuffer) ))
+    (if toName
+	(setq toBufferName toName)
+      )
+    (log toBufferName (concat "----- IPR " well " used for prior solve TS " (number-to-string ts) " ------- ")) 
+    (save-excursion
+      (if (psf-goto-ipr well ts)
+	  (progn 
+            (beginning-of-line)
+            (push-mark (point))
+            (setq srch "Bottomhole")
+            (search-forward srch)
+	    (forward-line)
+            (setq begin (point))	    
+            (setq srch "IMEX")
+            (search-forward srch)
+            (beginning-of-line)
+            (setq end (point))
+	    (setq output (buffer-substring begin end))
+	    (setq output (replace-regexp-in-string "[ \t\s]+" "," output) )
+
+            (log toBufferName output)
+	    )
+      )
+    )
+    )
+   ;;;(if (not toName)  (SelectDefaultOutputBuffer))
+)
+
 
 
 (defun imx-copy-ipr (well ts &optional toName) 
@@ -600,6 +643,24 @@
    )
 )
 
+(defun psf-ipr-wells (ts)
+  (interactive
+   (list
+    (read-number "timestep: ")
+    )
+   )
+  (let ((wlst nil) (well "") (bufferName (concat "iprs-csv-" "'" (number-to-string ts) "'")))
+    (get-buffer-create bufferName)
+    (setq wlst (getWellList))
+     (while wlst
+        (psf-copy-ipr-csv (car wlst) ts bufferName)
+	( setq wlst (cdr wlst))
+     )
+     (switch-to-buffer-other-frame bufferName)
+   )
+)
+
+
 (defun imx-ipr-tsrange (well ts1 ts2)
   (interactive
    (list
@@ -620,16 +681,19 @@
 )
 
 
-(defun psf-extract-convergence ( model comment )
+
+
+(defun psf-extract-convergence ( model comment annotateBufferName)
   (interactive
    (list
     (read-string "model: ")
     (read-string "comment: ")
+    (read-string "annotateBufferName: ")
     )
    )  
-  ( let ((begin 0) (end 0) (dof "The number of d.o.f.") (iter "NR iteration") (curit 0) (previt -1) (bufferName "") (current ""))
+  ( let ((currIterLine 0) (prevIterLine 0 ) (dof "The number of d.o.f.") (iter "NR iteration") (curit 0) (previt -1) (bufferName "") (current ""))
     ( setq ts (GetCurrentTimestep))
-    ( setq bufferName (concat "Convergence-" model "-" ts))
+    ( setq bufferName (concat "Convergence-" model "-" annotateBufferName "-" ts "-" ))
     (get-buffer-create bufferName)
     (save-excursion
     (search-backward dof)
@@ -642,10 +706,13 @@
         (log bufferName current )
         (setq previt curit)
         (search-forward iter nil nil)
+	(setq prevIterLine currIterLine)
+	(setq currIterLine  (string-to-number (nth 1 (split-string (what-line)))) ) 
         (setq current (buffer-substring (line-beginning-position) (line-end-position) ))
         (setq curit (string-to-number (nth 2 (split-string current))))
       )
     )
+    (goto-line (if (> prevIterLine 0) prevIterLine currIterLine))
   )
 )
 
@@ -1074,6 +1141,7 @@
    (list
     (getWellArgs)
     (read-number "timestep: ")
+    (read-string "buffer-name: ")
     )
   )
   (
@@ -1094,31 +1162,6 @@
   )
 )
  
-
-(defun psf-extract-info-ts(well ts &optional toName)
-  (interactive
-   (list
-    (getWellArgs)
-    (read-number "timestep: ")
-    )
-  )
-  (
-   let ((bufferName (concat "info-" well "-" (number-to-string ts))))
-    (if toName
-	(setq bufferName toName)
-      ( progn
-	(
-         (get-buffer-create bufferName)
-        )  
-       )
-    )    
-    (psf-copy-ipr well ts bufferName)
-    (psf-copy-imex-information well ts bufferName)
-    (if ( isOperativeUth well ts)
-	(psf-copy-well-summary well ts bufferName)
-    )
-  )
-)
 
 (defun psf-extract-duration ( bufferName)
   (interactive
@@ -1314,10 +1357,23 @@
       )
       )
     )
+    wlst
+   )
+)
+
+
+(defun getWellArgList()
+  (interactive)
+  (
+   let ((wlst nil) (argList nil) (f "") (srch "Prepared Well.*\\.") (done nil) (n 0 ) )
+    (save-excursion
+      (beginning-of-buffer)
+      (setq wlst (getWellList))
     (while wlst
       ( setq n ( + n 1) )
       ( setq argList (cons   (cons (car wlst) n ) argList))
       ( setq wlst (cdr wlst))
+      )
     )
     argList
    )
@@ -1408,7 +1464,7 @@
  (interactive)
  (completing-read
    "Complete wellname: "
-   (getWellList)
+   (getWellArgList)
    nil t "")
 )
 
@@ -1535,11 +1591,70 @@
   )
 )
 
+(defun GetCurrentSolution()
+  (interactive)
+  (
+   let(       
+     (srch-start-sol "Solving Solution Space:\\(.*\\)using")	
+     (srch-finished-sol "Solution Space:\\(.*\\)Finished")	
+     (srch-finished-prior "IPF add-on prior solve finished")
+     (pf_fin 0) (pf_prio 0) (pf3 0)
+     (pb_fin 0) (pb_prio 0) (pb3 0)
+     (solf1 "") (solf2 "") (solf3 "") (sol "")
+     (solb1 "") (solb2 "") (solb3 "") 
+   )
+   (save-excursion
+     (when (re-search-forward srch-finished-sol nil t)
+       (setq solf1 (match-string-no-properties 1))
+       (setq pf_fin (point))
+     )
+     )
+   (save-excursion
+     (when (search-backward-regexp srch-finished-sol nil t)
+       (setq solb1 (match-string-no-properties 1))
+       (setq pb_fin (point))
+     )
+     )   
+   (save-excursion
+     (when (re-search-forward srch-finished-prior nil t)
+       (setq solf2 (match-string-no-properties 1))
+       (setq pf_prio (point))
+     )
+   )
+   (save-excursion
+     (when (search-backward-regexp srch-finished-prior nil t)
+       (setq solb2 (match-string-no-properties 1))
+       (setq pb_prio (point))
+     )
+     )   
+   (save-excursion
+     (when (re-search-forward srch-start-sol nil t)
+       (setq solf3 (match-string-no-properties 1))
+       (setq pf3 (point))
+     )
+     )
+   (save-excursion
+     (when (search-backward-regexp srch-start-sol nil t)
+       (setq solb3 (match-string-no-properties 1))
+       (setq pb3 (point))
+     )
+     )   
+   (if (and (> pb_prio pb_fin) ( < pb_prio) )
+       (setq sol " main solve")
+        (progn
+           (setq sol "TBD")
+          )
+   )
+   sol
+  )
+)
+
+
 (defun PrintCurrentTimestep()
   (interactive)
   (
     let ((ts ""))
-   (setq ts (GetCurrentTimestep) )
+   (setq ts (concat (GetCurrentTimestep) (GetCurrentSolution) ) )
     (print ts)
   )
 )
