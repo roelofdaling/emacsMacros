@@ -311,8 +311,46 @@
   (point)
 )
 
+(defun psf-next-nr()
+  "goto to the next newton raphson iteration and return its sequence number"  
+  (interactive)
+  (
+   let ((srch "NR iteration \\([[:digit:]]+\\)" ) (iter 0))
+    (beginning-of-line)
+    (forward-line)    
+    (when (re-search-forward srch nil t) 
+      (setq iter (match-string-no-properties 1))
+      )
+    (string-to-number iter)
+  ) 
+)
+
+(defun psf-first-nr()
+  "goto to the first newton raphson iteration of the current solve"  
+  (interactive)
+  (
+   let ((srch "NR iteration 1 -" ) (iter 0))
+    (search-backward srch) 
+    (beginning-of-line)
+  ) 
+)
 
 
+(defun psf-last-nr()
+  "goto to the last NR iteration belonging to this block"
+  (interactive)
+  (
+    let ((lastPoint 0) (lastIter 0) (nextIter 0))
+    (setq lastPoint (point))
+    (setq nextIter (psf-next-nr))
+    (while (> nextIter lastIter)
+       (setq lastPoint (point))
+       (setq lastIter nextIter)
+       (setq nextIter (psf-next-nr))
+     )
+     (goto-char lastPoint)
+  ) 
+)
 (defun psf-goto-mainsolve(ts)
   "goto start of main solve in selected timestep"
   (interactive
@@ -1590,6 +1628,62 @@
    ts
   )
 )
+
+(defun psf-rb-iter()
+  (interactive)
+  (
+   let(       
+     (srch-rb "Rule-based solver iteration #\\([[:digit:]]+\\)")	
+     (iter 0))
+   (save-excursion
+     (search-backward-regexp srch-rb nil t)
+     (setq iter (match-string-no-properties 1))
+     )
+   (print (string-to-number iter))
+   (string-to-number iter)
+  )
+)
+
+(defun psf-next-rb()
+  "goto to the next rule based solver iteration and return its sequence number"  
+  (interactive)
+  (
+   let ((srch "Rule-based solver iteration #\\([[:digit:]]+\\)") (iter 0))
+    (beginning-of-line)
+    (forward-line)    
+    (when (re-search-forward srch nil t) 
+      (setq iter (match-string-no-properties 1))
+      )
+    (string-to-number iter)
+  ) 
+)
+
+(defun psf-last-rb()
+  "goto to the last rule based solver iteration belonging to this block"
+  (interactive)
+  (
+    let ((lastPoint 0) (lastIter 0) (nextIter 0))
+    (setq lastPoint (point))
+    (setq nextIter (psf-next-rb))
+    (while (> nextIter lastIter)
+       (setq lastPoint (point))
+       (setq lastIter nextIter)
+       (setq nextIter (psf-next-rb))
+     )
+     (goto-char lastPoint)
+  ) 
+)
+
+(defun psf-first-rb()
+  "goto to the first rule based iteration of the current solve"  
+  (interactive)
+  (
+   let ((srch "iteration #1" ))
+    (search-backward srch) 
+    (beginning-of-line)
+  ) 
+)
+
 
 (defun GetCurrentSolution()
   (interactive)
