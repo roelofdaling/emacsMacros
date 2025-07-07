@@ -62,6 +62,41 @@
    )
 )      
 
+( defun psf-replace-time24B (  )
+  "replace the wall-time colummn with a string shownig timestep info. To help comparing buffers"
+  (interactive)  
+  (
+   let(
+       (srch-time24 "^\\w\\w\\w\\w/\\w\\w/\\w\\w\\s-*\\w\\w:\\w\\w:\\w\\w")
+       (srch-time "")
+       (srch-ipfts "\\(TS.*\\)/IPF:\\s-From\\s-+\\(\\w+/\\w+/\\w+\\).*to\\s-\\(\\w+/\\w+/\\w+\\).*$")	
+       (start 0) (end 0) (from "") (to "") (ts ""))
+    (setq srch-time srch-time24)
+    (save-excursion
+      (end-of-buffer)
+      (setq end (point))
+      (while (search-backward-regexp srch-ipfts nil t)
+          (setq ts (match-string-no-properties 1))
+          (setq from (match-string-no-properties 2))
+          (setq to (match-string-no-properties 3))
+	  (setq col (concat ts "(" from " -- " to ")"))
+	  (search-backward "Starting the execution of")
+	  (beginning-of-line)
+	  (setq start (point))
+	  (print (concat "B: " col "--" (number-to-string start) "--" (number-to-string end)))
+          (save-restriction
+            (narrow-to-region start end)
+            (goto-char (point-min))
+            (replace-regexp srch-time col))
+	  (previous-line)
+	  (setq end start)
+	  (goto-char start)
+	  ;;;(print (concat "A: " col "--" (number-to-string start) "--" (number-to-string end)))
+       )
+     ) 
+   )      
+  )
+
 ( defun psf-replace-time12 (  )
   "replace the wall-time colummn with a string shownig timestep info. To help comparing buffers"
   (interactive)  
@@ -86,6 +121,41 @@
 	  (print (concat "B: " col "--" (number-to-string start) "--" (number-to-string end)))
           (replace-regexp-in-region srch-time col start end)
 	  (setq end(point))
+	  ;;;(print (concat "A: " col "--" (number-to-string start) "--" (number-to-string end)))
+       )
+      )
+   )
+)      
+
+( defun psf-replace-time12B (  )
+  "replace the wall-time colummn with a string shownig timestep info. To help comparing buffers"
+  (interactive)  
+  (
+   let(
+       (srch-time12 "^\\w.*?[AP]M")
+       (srch-time "")
+       (srch-ipfts "\\(TS.*\\)/IPF:\\s-From\\s-+\\(\\w+/\\w+/\\w+\\).*to\\s-\\(\\w+/\\w+/\\w+\\).*$")	
+       (start 0) (end 0) (from "") (to "") (ts ""))
+    (setq srch-time srch-time12)
+    (save-excursion
+      (end-of-buffer)
+      (setq end (point))
+      (while (search-backward-regexp srch-ipfts nil t)
+          (setq ts (match-string-no-properties 1))
+          (setq from (match-string-no-properties 2))
+          (setq to (match-string-no-properties 3))
+	  (setq col (concat ts "(" from " -- " to ")"))
+	  (search-backward "Starting the execution of")
+	  (beginning-of-line)
+	  (setq start (point))
+	  (print (concat "B: " col "--" (number-to-string start) "--" (number-to-string end)))
+          (save-restriction
+            (narrow-to-region start end)
+            (goto-char (point-min))
+            (replace-regexp srch-time col))
+	  (previous-line)
+	  (setq end start)
+	  (goto-char start)
 	  ;;;(print (concat "A: " col "--" (number-to-string start) "--" (number-to-string end)))
        )
       )
@@ -401,6 +471,16 @@
   )
 ) 
 
+(defun psf-goto-solspace-sync (solspace ts)
+  (interactive
+   (list
+    (getSolSpaces)
+    (read-number "timestep: ")
+    )
+   )
+  (apply-function-all 'psf-goto-solspace (list solspace ts))
+  (psf-goto-solspace solspace ts)
+)
 
 
 (defun psf-goto-ipr-cfl (well ts)
@@ -730,7 +810,7 @@
     )
    )  
   ( let ((currIterLine 0) (prevIterLine 0 ) (dof "The number of d.o.f.") (iter "NR iteration") (curit 0) (previt -1) (bufferName "") (current ""))
-    ( setq ts (GetCurrentTimestep))
+    ( setq ts (concat "TS" (GetCurrentTimestep)))
     ( setq bufferName (concat "Convergence-" model "-" annotateBufferName "-" ts "-" ))
     (get-buffer-create bufferName)
     (save-excursion
@@ -1619,7 +1699,7 @@
   (interactive)
   (
    let(       
-     (srch-ipfts "\\(TS.*\\)/IPF:\\s-From\\s-+\\(\\w+/\\w+/\\w+\\).*to\\s-\\(\\w+/\\w+/\\w+\\).*$")	
+     (srch-ipfts "TS\\(.*\\)/IPF:\\s-From\\s-+\\(\\w+/\\w+/\\w+\\).*to\\s-\\(\\w+/\\w+/\\w+\\).*$")	
      (ts ""))
    (save-excursion
      (search-backward-regexp srch-ipfts nil t)
@@ -1629,7 +1709,7 @@
   )
 )
 
-(defun psf-rb-iter()
+(defun psf-show-rb-iter()
   (interactive)
   (
    let(       
@@ -1644,6 +1724,27 @@
   )
 )
 
+
+(defun psf-rb-iter (it)
+  "goto rb iteration it"
+  (interactive "Miteration#: ")
+  (
+   let ((srch "iteration #1" ) (begin 0) (end 0))
+    (search-backward srch) 
+    (beginning-of-line)    
+    (setq srch (concat "iteration #" it))
+    (condition-case nil (search-forward srch) (error nil))
+  )
+)
+
+(defun psf-rb-iter-sync (it)
+  (interactive "Miteration #: ")
+  (exec-function-all 'psf-rb-iter (list it))
+  (psf-rb-iter it)
+)
+
+
+
 (defun psf-next-rb()
   "goto to the next rule based solver iteration and return its sequence number"  
   (interactive)
@@ -1657,6 +1758,38 @@
     (string-to-number iter)
   ) 
 )
+
+(defun psf-next-rb-sync()
+  "goto to the next rule based solver iteration and return its sequence number"  
+  (interactive)
+  (exec-function-all 'psf-next-rb)
+  (psf-next-rb)
+)
+(global-set-key (kbd "C-c l") #'psf-next-rb-sync)
+
+
+(defun psf-prev-rb()
+  "goto to the next rule based solver iteration and return its sequence number"  
+  (interactive)
+  (
+   let ((srch "Rule-based solver iteration #\\([[:digit:]]+\\)") (iter 0))
+    (beginning-of-line)
+    (previous-line)    
+    (when (re-search-backward srch nil t) 
+      (setq iter (match-string-no-properties 1))
+      )
+    (string-to-number iter)
+  ) 
+)
+
+(defun psf-prev-rb-sync()
+  "goto to the previous rule based solver iteration and return its sequence number"  
+  (interactive)
+  (exec-function-all 'psf-prev-rb)
+  (psf-prev-rb)
+)
+(global-set-key (kbd "C-c p") #'psf-prev-rb-sync)
+
 
 (defun psf-last-rb()
   "goto to the last rule based solver iteration belonging to this block"
@@ -1683,6 +1816,48 @@
     (beginning-of-line)
   ) 
 )
+
+(defun psf-lastrb-nextts()
+  (interactive)
+  (
+   let( (ts 0) )
+    (setq ts (string-to-number (GetCurrentTimestep)))
+    (setq ts (+ ts 1))
+    (psf-goto-solspace "TargetOfftake" ts)
+    (psf-last-rb)
+    )
+  )
+
+(defun psf-lastrb-nextts-sync()
+  (interactive)
+  (exec-function-all 'psf-lastrb-nextts)
+  (psf-lastrb-nextts)
+)
+(global-set-key (kbd "C-c t") #'psf-lastrb-nextts-sync)
+
+(defun psf-firstrb-sol-ts (solspace ts)
+  "goto start of rule based solver itertaion in the selected solution space and timestep"
+  (interactive
+   (list
+    (getSolSpaces)
+    (read-number "timestep: ")
+    )
+   )
+   (psf-goto-solspace solspace ts)
+   (psf-next-rb)
+)
+
+(defun psf-firstrb-sol-ts-sync( solspace ts)
+  (interactive
+   (list
+    (getSolSpaces)
+    (read-number "timestep: ")
+    )
+   )
+  (apply-function-all 'psf-firstrb-sol-ts (list solspace ts))
+  (psf-firstrb-sol-ts solspace ts)
+)
+(global-set-key (kbd "C-c z") #'psf-firstrb-sol-ts-sync)
 
 
 (defun GetCurrentSolution()
@@ -1748,7 +1923,7 @@
   (interactive)
   (
     let ((ts ""))
-   (setq ts (concat (GetCurrentTimestep) (GetCurrentSolution) ) )
+   (setq ts (concat "TS" (GetCurrentTimestep) (GetCurrentSolution) ) )
     (print ts)
   )
 )
@@ -1794,7 +1969,7 @@
       (other-window 1)
       (while (< count num-windows)
 	(condition-case nil
-	    (if arg 
+	    (if arg
 		(funcall func arg)
 		(funcall func)
 	    )
