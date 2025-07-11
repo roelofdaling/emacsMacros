@@ -718,6 +718,37 @@
    ;;;(if (not toName)  (SelectDefaultOutputBuffer))
 )
 
+(defun psf-extract-rb-adjust (solspace ts)
+  (interactive
+   (list
+    (getSolSpaces)
+    (read-number "timestep: ")
+    )
+   )
+
+  (psf-goto-solspace solspace ts)
+  (let ((cts 0) (srch "Adjusting") (bufferName "") (notdone t))
+    (setq bufferName (concat "TS" (number-to-string ts) "RB-adjust_" solspace))	
+    (get-buffer-create bufferName)
+    (psf-goto-solspace solspace ts)
+    (search-forward srch)
+    (setq cts (number-to-string ts))
+    (setq notdone (equal cts (GetCurrentTimestep)))
+    (while notdone
+          (progn
+           (beginning-of-line)
+           (setq begin (point))
+           (end-of-line)
+           (setq end (point))
+           (append-to-buffer bufferName begin end)
+           (log bufferName "")
+           (search-forward srch)
+           (setq notdone (equal cts (GetCurrentTimestep)))
+         )
+     )
+  )
+)
+
 
 (defun psf-extract-ts (ts)
   (interactive
