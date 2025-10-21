@@ -12,6 +12,7 @@
 )  
 
 (defvar currentGlobalSrch "")
+(defvar defaultControl "")
 
 (defconst POINT-REGISTER 0
   "Register to save the current point in.")
@@ -420,7 +421,9 @@
      )
      (goto-char lastPoint)
   ) 
-)
+  )
+(global-set-key (kbd "C-c x") #'psf-last-nr)
+
 (defun psf-goto-mainsolve(ts)
   "goto start of main solve in selected timestep"
   (interactive
@@ -452,6 +455,53 @@
   ( gotoNewtonIteration it)
 )
 
+(defun psf-goto-mainresult(ts)
+  "goto result of main solve in selected timestep"
+  (interactive "Mtimestep: ")
+  (
+   let ((srch " ") (begin 0) (end 0))
+    (beginning-of-buffer)    
+    (setq srch (concat "TS" ts "/Main"))
+    (condition-case nil (search-forward srch) (error nil))
+  )
+  (point)
+)
+
+(defun psf-goto-mainresult-control(ts)
+  "goto result of main solve in selected timestep"
+  (interactive "Mtimestep: ")
+  (
+   let ((srch " ") (begin 0) (end 0))
+    (beginning-of-buffer)    
+    (setq srch (concat "TS" ts "/Main"))
+    (condition-case nil (search-forward srch) (error nil))
+    (search-forward defaultControl)    
+  )
+  (point)
+)
+
+
+(defun psf-next-mainresult()
+  (interactive)
+  ( let ((ts "") (tsn 0))
+    (setq ts (GetCurrentTimestep))
+    (setq tsn (+ 1 (string-to-number ts) ) )
+    (setq ts ( number-to-string tsn) )
+    (psf-goto-mainresult-control ts)
+  )
+)
+(global-set-key (kbd "C-c m") #'psf-next-mainresult)
+
+(defun psf-prev-mainresult()
+  (interactive)
+  ( let ((ts "") (tsn 0))
+    (setq ts (GetCurrentTimestep))
+    (setq tsn (- (string-to-number ts) 1) )
+    (setq ts ( number-to-string tsn) )
+    (psf-goto-mainresult-control ts)
+  )
+)
+(global-set-key (kbd "C-c j") #'psf-prev-mainresult)
 
 
 (defun psf-goto-solspace (solspace ts)
@@ -513,7 +563,7 @@
   ( let ((srch " ") (found nil))
       (beginning-of-buffer)
       (setq qwell (concat "'" well "'"))
-      (setq srch (concat "After mapping: IPR table for well " qwell))
+      (setq srch (concat "After mapping: IPR table for " qwell))
       (psf-goto-ts (number-to-string ts))
       (if (search-backward srch nil t) (setq found t))
     found
@@ -635,7 +685,7 @@
             (setq begin (point))
             (setq srch "Bottomhole")
             (search-forward srch)
-            (setq srch "IMEX")
+            (setq srch "Explicit Coupled")
             (search-forward srch)
             (beginning-of-line)
             (setq end (point))
@@ -670,7 +720,7 @@
             (search-forward srch)
 	    (forward-line)
             (setq begin (point))	    
-            (setq srch "IMEX")
+            (setq srch "Explicit Coupled")
             (search-forward srch)
             (beginning-of-line)
             (setq end (point))
@@ -1526,8 +1576,65 @@
     )
     argList
    )
-)
+  )
 
+
+(defun my-dynamic-interactive (category item)
+  "Prompt for CATEGORY, then use it to generate ITEM choices."
+  (interactive
+   (let* ((category (read-string "Enter category: "))
+          (items (cond
+                  ((string= category "fruit") '("apple" "banana" "cherry"))
+                  ((string= category "color") '("red" "green" "blue"))
+                  (t '("unknown"))))
+          (item (completing-read (format "Choose item from %s: " category) items)))
+     (list category item)))
+  (message "You chose category '%s' and item '%s'" category item))
+
+
+
+(defun setDefaultControl ( ts control )
+  (interactive
+   (let* (( ts (read-string "timestep: "))
+     (control (getControlArgs ts )))
+     (list ts control)
+     ))
+ (setq defaultControl control) 
+ (print defaultControl)
+)  
+
+(defun getControlList( ts )
+  (interactive "Mtimestep: ")
+  (
+   let( (clst nil) (argList nil) (f "") (srchCtrl "Control name") (done nil) (n 0)
+	(srchDate ".*\\s-\\([[:digit:]]+\\)/\\([[:digit:]]+\\)/\\([[:digit:]]+\\).*")
+	(start 0) (end 0) (cname nil)
+	)
+   (save-excursion 
+     (psf-goto-mainresult ts)
+     (re-search-forward srchCtrl nil t)
+     (forward-line 2)
+     (setq start (point))
+     (re-search-forward srchDate nil t)
+     (previous-line)
+     (setq end (point))
+     (goto-char start)
+     (while (< (point) end)
+        (setq current (buffer-substring (line-beginning-position) (line-end-position) ))
+	(setq cname (nth 0 (split-string current)))
+        (setq clst (cons cname clst))
+        (forward-line 1)
+     )
+    (while clst
+      ( setq n ( + n 1) )
+      ( setq argList (cons   (cons (car clst) n ) argList))
+      ( setq clst (cdr clst))
+    )
+    )
+   (print argList)
+   argList
+ )
+)
 
 (defun getTimestepList()
     (
@@ -1607,6 +1714,15 @@
     argList
   )      
 )  
+
+
+(defun getControlArgs( ts)
+ (interactive "Mtimestep: ")
+ (completing-read
+   "Complete control name: "
+   (getControlList ts)
+   nil t "")
+)
 
 
 (defun getWellArgs()
